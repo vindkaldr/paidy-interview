@@ -1,0 +1,6 @@
+services:
+  one-frame:
+    image: paidyinc/one-frame:v0.3
+    restart: always
+    ports:
+      - "8081:8080"
