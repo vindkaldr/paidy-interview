@@ -4,3 +4,8 @@ services:
     restart: always
     ports:
       - "8081:8080"
+  redis:
+    image: redis:8.2.0-alpine3.22
+    restart: always
+    ports:
+      - "6379:6379"

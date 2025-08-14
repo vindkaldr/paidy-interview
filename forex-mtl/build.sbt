@@ -62,6 +62,7 @@ libraryDependencies ++= Seq(
   Libraries.circeGeneric,
   Libraries.circeGenericExt,
   Libraries.circeParser,
+  Libraries.redis4cats,
   Libraries.pureConfig,
   Libraries.logback,
   Libraries.scalaTest      % Test,

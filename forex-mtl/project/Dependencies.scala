@@ -33,6 +33,7 @@ object Dependencies {
     lazy val circeGeneric    = circe("circe-generic")
     lazy val circeGenericExt = circe("circe-generic-extras")
     lazy val circeParser     = circe("circe-parser")
+    lazy val redis4cats      = "dev.profunktor" %% "redis4cats-effects" % "0.14.0"
     lazy val pureConfig      = "com.github.pureconfig" %% "pureconfig" % Versions.pureConfig
 
     // Compiler plugins

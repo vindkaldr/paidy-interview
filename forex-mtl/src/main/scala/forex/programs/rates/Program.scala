@@ -1,24 +1,30 @@
 package forex.programs.rates
 
-import cats.Functor
+import cats.Monad
 import cats.data.EitherT
-import errors._
+import forex.domain.Rate.Pair
 import forex.domain._
-import forex.services.RatesService
+import forex.programs.rates.errors._
+import forex.services.{CacheService, RatesService}
 
-class Program[F[_]: Functor](
-    ratesService: RatesService[F]
+class Program[F[_]: Monad](
+    ratesService: RatesService[F],
+    cacheService: CacheService[F]
 ) extends Algebra[F] {
 
   override def get(request: Protocol.GetRatesRequest): F[Error Either Rate] =
-    EitherT(ratesService.get(Rate.Pair(request.from, request.to))).leftMap(toProgramError(_)).value
-
+    EitherT(cacheService.get(Pair(request.from, request.to)))
+      .leftFlatMap(_ => EitherT(ratesService.get(Pair(request.from, request.to)))
+        .semiflatTap(rate => cacheService.setExpiring(rate)))
+      .leftMap(toProgramError)
+      .value
 }
 
 object Program {
 
-  def apply[F[_]: Functor](
-      ratesService: RatesService[F]
-  ): Algebra[F] = new Program[F](ratesService)
+  def apply[F[_]: Monad](
+      ratesService: RatesService[F],
+      cacheService: CacheService[F]
+  ): Algebra[F] = new Program[F](ratesService, cacheService)
 
 }

@@ -1,6 +1,7 @@
 package forex
 
-import cats.effect.{ConcurrentEffect, Timer}
+import cats.effect.{ConcurrentEffect, ContextShift, Timer}
+import dev.profunktor.redis4cats.effect.Log
 import forex.config.ApplicationConfig
 import forex.http.rates.RatesHttpRoutes
 import forex.programs._
@@ -9,11 +10,13 @@ import org.http4s._
 import org.http4s.implicits._
 import org.http4s.server.middleware.{AutoSlash, Timeout}
 
-class Module[F[_]: ConcurrentEffect: Timer](config: ApplicationConfig) {
+class Module[F[_]: ConcurrentEffect: Timer](config: ApplicationConfig)(implicit L: Log[F], ev: ContextShift[F]) {
 
   private val ratesService: RatesService[F] = RatesServices.live[F]
 
-  private val ratesProgram: RatesProgram[F] = RatesProgram[F](ratesService)
+  private val cacheService: CacheService[F] = CacheServices.live[F]
+
+  private val ratesProgram: RatesProgram[F] = RatesProgram[F](ratesService, cacheService)
 
   private val ratesHttpRoutes: HttpRoutes[F] = new RatesHttpRoutes[F](ratesProgram).routes
 
