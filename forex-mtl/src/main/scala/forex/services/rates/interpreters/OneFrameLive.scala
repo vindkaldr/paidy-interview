@@ -21,7 +21,8 @@ class OneFrameLive[F[_]: ConcurrentEffect] extends Algebra[F] {
     BlazeClientBuilder[F](global).resource.use { client: Client[F] =>
       val request = Request[F](
         method = Method.GET,
-        uri = uri"http://localhost:8081/rates?pair=USDJPY"
+        uri = uri"http://localhost:8081/rates"
+          .withQueryParams(Map("pair" -> s"${pair.from}${pair.to}"))
       ).withHeaders(
         Headers(Header.Raw(CIString("token"), "10dc303535874aeccc86a8251e6992f5"))
       )
