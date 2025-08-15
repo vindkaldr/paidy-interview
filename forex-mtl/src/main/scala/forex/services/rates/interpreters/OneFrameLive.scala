@@ -17,12 +17,12 @@ import org.typelevel.ci.CIString
 import scala.concurrent.ExecutionContext.global
 
 class OneFrameLive[F[_]: ConcurrentEffect] extends Algebra[F] {
-  override def get(pair: Rate.Pair): F[Error Either Rate] =
+  override def get(pairs: List[Rate.Pair]): F[Error Either List[Rate]] =
     BlazeClientBuilder[F](global).resource.use { client: Client[F] =>
       val request = Request[F](
         method = Method.GET,
         uri = uri"http://localhost:8081/rates"
-          .withQueryParams(Map("pair" -> s"${pair.from}${pair.to}"))
+          .withQueryParam("pair", pairs.map(p => s"${p.from}${p.to}"))
       ).withHeaders(
         Headers(Header.Raw(CIString("token"), "10dc303535874aeccc86a8251e6992f5"))
       )
@@ -31,7 +31,7 @@ class OneFrameLive[F[_]: ConcurrentEffect] extends Algebra[F] {
         case Status.Successful(resp) =>
           resp.attemptAs[List[OneFrameRate]].value
             .map(_.leftMap(err => Error.OneFrameLookupFailed(err.message))
-              .map(ofr => Rate(Pair(ofr.head.from, ofr.head.to), Price(ofr.head.price), Timestamp.apply(ofr.head.timestamp))))
+              .map(ofr => ofr.map(r => Rate(Pair(r.from, r.to), Price(r.price), Timestamp.apply(r.timestamp)))))
       }
     }
 }

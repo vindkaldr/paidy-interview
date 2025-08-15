@@ -11,4 +11,10 @@ object Rate {
       from: Currency,
       to: Currency
   )
+
+  def all(): List[Rate.Pair] =
+    for (from <- Currency.all();
+         to <- Currency.all()
+         if from != to)
+    yield Rate.Pair(from, to)
 }

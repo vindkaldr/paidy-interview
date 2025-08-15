@@ -31,12 +31,14 @@ class CacheLive[F[_]: Concurrent](implicit L: Log[F], ev: ContextShift[F]) exten
       }
     }
 
-  override def setExpiring(rate: Rate): F[Unit] =
+  override def setExpiring(rates: List[Rate]): F[Unit] =
     Redis[F].utf8("redis://localhost").use { redis =>
-      val key = s"${rate.pair.from}:${rate.pair.to}"
-      for {
-        _ <- redis.hmSet(key, Map("price" -> rate.price.value.toString, "timestamp" -> rate.timestamp.value.toString))
-        _ <- redis.expire(key, 4.minutes)
-      } yield ()
+      rates.traverse_(rate => {
+        val key = s"${rate.pair.from}:${rate.pair.to}"
+        for {
+          _ <- redis.hmSet(key, Map("price" -> rate.price.value.toString, "timestamp" -> rate.timestamp.value.toString))
+          _ <- redis.expire(key, 4.minutes)
+        } yield ()
+      })
     }
 }
