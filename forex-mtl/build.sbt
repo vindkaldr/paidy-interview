@@ -69,3 +69,6 @@ libraryDependencies ++= Seq(
   Libraries.scalaCheck     % Test,
   Libraries.catsScalaCheck % Test
 )
+
+assembly / assemblyMergeStrategy := (_ => MergeStrategy.last)
+assembly / mainClass := Some("forex.Main")

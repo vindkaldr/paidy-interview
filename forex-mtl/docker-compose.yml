@@ -1,11 +1,32 @@
 services:
+  nginx:
+    image: nginx:stable-alpine3.21-slim
+    ports:
+      - "8090:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - forex1
+      - forex2
+  forex1:
+    image: forex:1.0.1
+    environment:
+      - ONE_FRAME_HOST=one-frame
+      - ONE_FRAME_PORT=8080
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+  forex2:
+    image: forex:1.0.1
+    environment:
+      - ONE_FRAME_HOST=one-frame
+      - ONE_FRAME_PORT=8080
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
   one-frame:
     image: paidyinc/one-frame:v0.3
-    restart: always
     ports:
       - "8081:8080"
   redis:
     image: redis:8.2.0-alpine3.22
-    restart: always
     ports:
       - "6379:6379"

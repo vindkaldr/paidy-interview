@@ -5,6 +5,7 @@ import cats.implicits.toFunctorOps
 import cats.syntax.all._
 import dev.profunktor.redis4cats.Redis
 import dev.profunktor.redis4cats.effect.Log
+import forex.config.ApplicationConfig
 import forex.domain.{Price, Rate, Timestamp}
 import forex.services.cache.Algebra
 import forex.services.cache.errors._
@@ -12,9 +13,10 @@ import forex.services.cache.errors._
 import java.time.OffsetDateTime
 import scala.concurrent.duration._
 
-class CacheLive[F[_]: Concurrent](implicit L: Log[F], ev: ContextShift[F]) extends Algebra[F] {
+class CacheLive[F[_]: Concurrent](config: ApplicationConfig)
+                                 (implicit L: Log[F], ev: ContextShift[F]) extends Algebra[F] {
   override def get(pair: Rate.Pair): F[Either[Error, Rate]] =
-    Redis[F].utf8("redis://localhost").use { redis =>
+    Redis[F].utf8(s"redis://${config.redis.host}:${config.redis.port}").use { redis =>
       redis.hmGet(s"${pair.from}:${pair.to}", "price", "timestamp").map { fields =>
         for {
           priceStr     <- fields.get("price").toRight(Error.CacheLookupFailed("error1"))
@@ -32,7 +34,7 @@ class CacheLive[F[_]: Concurrent](implicit L: Log[F], ev: ContextShift[F]) exten
     }
 
   override def setExpiring(rates: List[Rate]): F[Unit] =
-    Redis[F].utf8("redis://localhost").use { redis =>
+    Redis[F].utf8(s"redis://${config.redis.host}:${config.redis.port}").use { redis =>
       rates.traverse_(rate => {
         val key = s"${rate.pair.from}:${rate.pair.to}"
         for {
