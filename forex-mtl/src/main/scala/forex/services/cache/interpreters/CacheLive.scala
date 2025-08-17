@@ -4,14 +4,14 @@ import cats.effect._
 import cats.implicits.toFunctorOps
 import cats.syntax.all._
 import dev.profunktor.redis4cats.RedisCommands
+import forex.config.ApplicationConfig
 import forex.domain.{Price, Rate, Timestamp}
 import forex.services.cache.Algebra
 import forex.services.cache.errors._
 
 import java.time.OffsetDateTime
-import scala.concurrent.duration._
 
-class CacheLive[F[_]: Concurrent](redisResource: Resource[F, RedisCommands[F, String, String]]) extends Algebra[F] {
+class CacheLive[F[_]: Concurrent](config: ApplicationConfig, redisResource: Resource[F, RedisCommands[F, String, String]]) extends Algebra[F] {
   override def get(pair: Rate.Pair): F[Either[Error, Rate]] =
     redisResource.use { redis =>
       redis.hmGet(s"${pair.from}:${pair.to}", "price", "timestamp").map { fields =>
@@ -36,7 +36,7 @@ class CacheLive[F[_]: Concurrent](redisResource: Resource[F, RedisCommands[F, St
         val key = s"${rate.pair.from}:${rate.pair.to}"
         for {
           _ <- redis.hmSet(key, Map("price" -> rate.price.value.toString, "timestamp" -> rate.timestamp.value.toString))
-          _ <- redis.expire(key, 10.seconds)
+          _ <- redis.expire(key, config.forex.exchangeRateExpiresAfter)
         } yield ()
       })
     }

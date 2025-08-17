@@ -8,5 +8,5 @@ import forex.services.cache.interpreters._
 
 object Interpreters {
   def live[F[_]: ConcurrentEffect](config: ApplicationConfig)(implicit log: Log[F], contextShift: ContextShift[F]): Algebra[F] =
-    new CacheLive[F](Redis[F].utf8(s"redis://${config.redis.host}:${config.redis.port}"))
+    new CacheLive[F](config, Redis[F].utf8(s"redis://${config.redis.host}:${config.redis.port}"))
 }
