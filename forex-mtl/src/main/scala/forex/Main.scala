@@ -17,20 +17,18 @@ object Main extends IOApp {
       new Application[IO].stream(executionContext, httpClient).compile.drain.as(ExitCode.Success)
     }
   }
-
 }
 
 class Application[F[_]: ConcurrentEffect: Timer](implicit cs: ContextShift[F]) {
   implicit val log: Log[F] = Log.NoOp.instance
 
-  def stream(ec: ExecutionContext, client: Client[F]): Stream[F, Unit] =
+  def stream(ec: ExecutionContext, httpClient: Client[F]): Stream[F, Unit] =
     for {
       config <- Config.stream("app")
-      module = new Module[F](config, client)
+      module = new Module[F](config, httpClient)
       _ <- BlazeServerBuilder[F](ec)
             .bindHttp(config.http.port, config.http.host)
             .withHttpApp(module.httpApp)
             .serve
     } yield ()
-
 }

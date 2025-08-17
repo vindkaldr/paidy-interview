@@ -15,7 +15,7 @@ import org.http4s._
 import org.http4s.client._
 import org.typelevel.ci.CIString
 
-class OneFrameLive[F[_]: ConcurrentEffect](config: ApplicationConfig, client: Client[F]) extends Algebra[F] {
+class OneFrameLive[F[_]: ConcurrentEffect](config: ApplicationConfig, httpClient: Client[F]) extends Algebra[F] {
   override def get(pairs: List[Rate.Pair]): F[Error Either List[Rate]] = {
       val request = Request[F](
         method = Method.GET,
@@ -27,7 +27,7 @@ class OneFrameLive[F[_]: ConcurrentEffect](config: ApplicationConfig, client: Cl
         Headers(Header.Raw(CIString("token"), "10dc303535874aeccc86a8251e6992f5"))
       )
 
-      client.run(request).use {
+      httpClient.run(request).use {
         case Status.Successful(resp) =>
           resp.attemptAs[List[OneFrameRate]].value
             .map(_.leftMap(err => Error.OneFrameLookupFailed(err.message))
