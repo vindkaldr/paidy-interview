@@ -12,8 +12,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.global
 
 object Main extends IOApp {
-  implicit val cs: ContextShift[IO] = IO.contextShift(executionContext)
-
   override def run(args: List[String]): IO[ExitCode] = {
     BlazeClientBuilder[IO](global).resource.use { httpClient =>
       new Application[IO].stream(executionContext, httpClient).compile.drain.as(ExitCode.Success)
