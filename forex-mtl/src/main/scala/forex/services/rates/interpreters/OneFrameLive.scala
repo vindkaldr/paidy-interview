@@ -12,15 +12,11 @@ import forex.services.rates.errors._
 import org.http4s.Uri.Path.Segment
 import org.http4s.Uri.{Authority, RegName}
 import org.http4s._
-import org.http4s.blaze.client.BlazeClientBuilder
 import org.http4s.client._
 import org.typelevel.ci.CIString
 
-import scala.concurrent.ExecutionContext.global
-
-class OneFrameLive[F[_]: ConcurrentEffect](config: ApplicationConfig) extends Algebra[F] {
-  override def get(pairs: List[Rate.Pair]): F[Error Either List[Rate]] =
-    BlazeClientBuilder[F](global).resource.use { client: Client[F] =>
+class OneFrameLive[F[_]: ConcurrentEffect](config: ApplicationConfig, client: Client[F]) extends Algebra[F] {
+  override def get(pairs: List[Rate.Pair]): F[Error Either List[Rate]] = {
       val request = Request[F](
         method = Method.GET,
         uri = Uri(scheme = Some(Uri.Scheme.http),
@@ -37,5 +33,5 @@ class OneFrameLive[F[_]: ConcurrentEffect](config: ApplicationConfig) extends Al
             .map(_.leftMap(err => Error.OneFrameLookupFailed(err.message))
               .map(ofr => ofr.map(r => Rate(Pair(r.from, r.to), Price(r.price), Timestamp.apply(r.timestamp)))))
       }
-    }
+  }
 }

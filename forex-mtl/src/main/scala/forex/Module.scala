@@ -7,12 +7,14 @@ import forex.http.rates.RatesHttpRoutes
 import forex.programs._
 import forex.services._
 import org.http4s._
+import org.http4s.client.Client
 import org.http4s.implicits._
 import org.http4s.server.middleware.{AutoSlash, Timeout}
 
-class Module[F[_]: ConcurrentEffect: Timer](config: ApplicationConfig)(implicit L: Log[F], ev: ContextShift[F]) {
+class Module[F[_]: ConcurrentEffect: Timer](config: ApplicationConfig, client: Client[F])
+                                           (implicit L: Log[F], ev: ContextShift[F]) {
 
-  private val ratesService: RatesService[F] = RatesServices.live[F](config)
+  private val ratesService: RatesService[F] = RatesServices.live[F](config, client)
 
   private val cacheService: CacheService[F] = CacheServices.live[F](config)
 

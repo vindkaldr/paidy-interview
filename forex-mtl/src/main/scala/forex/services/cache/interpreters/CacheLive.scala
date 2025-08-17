@@ -36,7 +36,7 @@ class CacheLive[F[_]: Concurrent](redisResource: Resource[F, RedisCommands[F, St
         val key = s"${rate.pair.from}:${rate.pair.to}"
         for {
           _ <- redis.hmSet(key, Map("price" -> rate.price.value.toString, "timestamp" -> rate.timestamp.value.toString))
-          _ <- redis.expire(key, 4.minutes)
+          _ <- redis.expire(key, 10.seconds)
         } yield ()
       })
     }
