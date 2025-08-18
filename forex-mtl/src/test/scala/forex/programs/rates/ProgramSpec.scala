@@ -19,58 +19,55 @@ import java.time.OffsetDateTime
 class ProgramSpec extends AnyFunSuite with Matchers {
   test("loads rate from cache") {
     val rate = Rate(Rate.Pair(USD, JPY), Price(BigDecimal(1)), Timestamp(now))
-    val (cacheService, capturedPair, _) = CacheServiceSpy.stubRate(Right(rate)).unsafeRunSync()
-    val rateService = new DummyRateService
-    val program = new Program(rateService, cacheService)
-
-    program.get(GetRatesRequest(rate.pair.from, rate.pair.to)).unsafeRunSync()
-      .shouldBe(Right(rate))
-
-    capturedPair.get.unsafeRunSync()
-      .shouldBe(rate.pair)
+    for {
+      cacheServiceSpy <- CacheServiceSpy.stubRate(Right(rate))
+      (cacheService, capturedPair, _) = cacheServiceSpy
+      rateServiceSpy <- RateServiceSpy.stubRates(Left(RatesError.OneFrameLookupFailed("dummy")))
+      (rateService, _) = rateServiceSpy
+      program = new Program(rateService, cacheService)
+      _ = program.get(GetRatesRequest(rate.pair.from, rate.pair.to)).shouldBe(Right(rate))
+      _ = capturedPair.get.shouldBe(rate.pair)
+    } yield ()
   }
 
   test("loads rate from one frame when not cached") {
     val firstRate = Rate(Rate.Pair(USD, JPY), Price(BigDecimal(1)), Timestamp(now))
     val rate = Rate(Rate.Pair(NZD, EUR), Price(BigDecimal(2)), Timestamp(now.minusMinutes(1)))
-    val cacheService = new CacheServiceStub(Left(CacheError.CacheLookupFailed("not in cache")))
-    val ratesService = new RateServiceStub(Right(List(firstRate, rate)))
-    val program = new Program(ratesService, cacheService)
-
-    program.get(GetRatesRequest(rate.pair.from, rate.pair.to)).unsafeRunSync()
-      .shouldBe(Right(rate))
+    for {
+      cacheServiceSpy <- CacheServiceSpy.stubRate(Left(CacheError.CacheLookupFailed("not in cache")))
+      (cacheService, _, _) = cacheServiceSpy
+      rateServiceSpy <- RateServiceSpy.stubRates(Right(List(firstRate, rate)))
+      (ratesService, _) = rateServiceSpy
+      program = new Program(ratesService, cacheService)
+      _ = program.get(GetRatesRequest(rate.pair.from, rate.pair.to)).shouldBe(Right(rate))
+    } yield ()
   }
 
   test("caches rate when loaded from one frame") {
     val rate = Rate(Rate.Pair(USD, JPY), Price(BigDecimal(1)), Timestamp(now))
-    val (cacheService, _, capturedRates) = CacheServiceSpy.stubRate(Left(CacheError.CacheLookupFailed("not in cache"))).unsafeRunSync()
-    val ratesService = new RateServiceStub(Right(List(rate)))
-    val program = new Program(ratesService, cacheService)
-
-    program.get(GetRatesRequest(rate.pair.from, rate.pair.to)).unsafeRunSync()
-      .shouldBe(Right(rate))
-
-    capturedRates.get.unsafeRunSync()
-      .shouldBe(List(rate))
+    for {
+      cacheServiceSpy <- CacheServiceSpy.stubRate(Left(CacheError.CacheLookupFailed("not in cache")))
+      (cacheService, _, capturedRates) = cacheServiceSpy
+      rateServiceSpy <- RateServiceSpy.stubRates(Right(List(rate)))
+      (ratesService, _) = rateServiceSpy
+      program = new Program(ratesService, cacheService)
+      _ = program.get(GetRatesRequest(rate.pair.from, rate.pair.to)).shouldBe(Right(rate))
+      _ = capturedRates.get.shouldBe(List(rate))
+    } yield ()
   }
 
   test("loads all rates from one frame") {
     val rate = Rate(Rate.Pair(USD, JPY), Price(BigDecimal(1)), Timestamp(now))
-    val cacheService = new CacheServiceStub(Left(CacheError.CacheLookupFailed("not in cache")))
-    val (ratesService, capturedPairs) = RateServiceSpy.stubRates(Right(List(rate))).unsafeRunSync()
-    val program = new Program(ratesService, cacheService)
-
-    program.get(GetRatesRequest(rate.pair.from, rate.pair.to)).unsafeRunSync()
-      .shouldBe(Right(rate))
-
-    capturedPairs.get.unsafeRunSync()
-      .shouldBe(Rate.all())
+    for {
+      cacheServiceSpy <- CacheServiceSpy.stubRate(Left(CacheError.CacheLookupFailed("not in cache")))
+      (cacheService, _, _) = cacheServiceSpy
+      rateServiceSpy <- RateServiceSpy.stubRates(Right(List(rate)))
+      (ratesService, capturedPairs) = rateServiceSpy
+      program = new Program(ratesService, cacheService)
+      _ = program.get(GetRatesRequest(rate.pair.from, rate.pair.to)).shouldBe(Right(rate))
+      _ = capturedPairs.get.shouldBe(Rate.all())
+    } yield ()
   }
-}
-
-class CacheServiceStub(rate: Either[CacheError, Rate]) extends CacheAlgebra[IO] {
-  override def get(pair: Rate.Pair): IO[CacheError Either Rate] = IO.pure(rate)
-  override def setExpiring(rates: List[Rate]): IO[Unit] = IO.unit
 }
 
 class CacheServiceSpy(rate: Either[CacheError, Rate], capturedPair: Ref[IO, Pair], capturedRates: Ref[IO, List[Rate]]) extends CacheAlgebra[IO] {
@@ -88,10 +85,6 @@ object CacheServiceSpy {
   }
 }
 
-class RateServiceStub(rates: Either[RatesError, List[Rate]]) extends RatesAlgebra[IO] {
-  override def get(pairs: List[Rate.Pair]): IO[RatesError Either List[Rate]] = IO.pure(rates)
-}
-
 class RateServiceSpy(rates: Either[RatesError, List[Rate]], capturedPairs: Ref[IO, List[Rate.Pair]]) extends RatesAlgebra[IO] {
   override def get(pairs: List[Rate.Pair]): IO[RatesError Either List[Rate]] =
     capturedPairs.set(pairs) *> IO.pure(rates)
@@ -103,11 +96,6 @@ object RateServiceSpy {
       capturedPairs  <- Ref.of[IO, List[Rate.Pair]](List())
       service       = new RateServiceSpy(rates, capturedPairs)
     } yield (service, capturedPairs)
-}
-
-class DummyRateService extends RatesAlgebra[IO] {
-  override def get(pairs: List[Rate.Pair]): IO[RatesError Either List[Rate]] =
-    IO.pure(Left(RatesError.OneFrameLookupFailed("dummy")))
 }
 
 object ProgramSpec {
