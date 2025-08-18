@@ -1,4 +1,4 @@
-import sbt._
+import sbt.*
 
 object Dependencies {
 
@@ -8,6 +8,7 @@ object Dependencies {
     val fs2        = "2.5.4"
     val http4s     = "0.22.15"
     val circe      = "0.14.2"
+    val redis4cats = "0.14.0"
     val pureConfig = "0.17.4"
 
     val kindProjector  = "0.13.2"
@@ -33,8 +34,8 @@ object Dependencies {
     lazy val circeGeneric    = circe("circe-generic")
     lazy val circeGenericExt = circe("circe-generic-extras")
     lazy val circeParser     = circe("circe-parser")
-    lazy val redis4cats      = "dev.profunktor" %% "redis4cats-effects" % "0.14.0"
-    lazy val pureConfig      = "com.github.pureconfig" %% "pureconfig" % Versions.pureConfig
+    lazy val redis4cats      = "dev.profunktor"         %% "redis4cats-effects" % Versions.redis4cats
+    lazy val pureConfig      = "com.github.pureconfig"  %% "pureconfig"         % Versions.pureConfig
 
     // Compiler plugins
     lazy val kindProjector = "org.typelevel" %% "kind-projector" % Versions.kindProjector cross CrossVersion.full
