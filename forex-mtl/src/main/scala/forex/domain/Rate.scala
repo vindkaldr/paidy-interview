@@ -12,7 +12,7 @@ object Rate {
       to: Currency
   )
 
-  def all(): List[Rate.Pair] =
+  def allPairs(): List[Rate.Pair] =
     for (from <- Currency.all();
          to <- Currency.all()
          if from != to)

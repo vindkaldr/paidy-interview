@@ -65,7 +65,7 @@ class ProgramSpec extends AnyFunSuite with Matchers {
       (ratesService, capturedPairs) = rateServiceSpy
       program = new Program(ratesService, cacheService)
       _ = program.get(GetRatesRequest(rate.pair.from, rate.pair.to)).shouldBe(Right(rate))
-      _ = capturedPairs.get.shouldBe(Rate.all())
+      _ = capturedPairs.get.shouldBe(Rate.allPairs())
     } yield ()
   }
 }

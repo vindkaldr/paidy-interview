@@ -16,7 +16,7 @@ class Program[F[_]: Monad](
   override def get(request: Protocol.GetRatesRequest): F[Error Either Rate] = {
     val pair = Pair(request.from, request.to)
     EitherT(cacheService.get(pair))
-      .leftFlatMap(_ => EitherT(ratesService.get(Rate.all()))
+      .leftFlatMap(_ => EitherT(ratesService.get(Rate.allPairs()))
         .semiflatTap(rates => cacheService.setExpiring(rates))
         .subflatMap(_.find(_.pair == pair).toRight(RateError.OneFrameLookupFailed("Not found"))))
       .leftMap(toProgramError)
