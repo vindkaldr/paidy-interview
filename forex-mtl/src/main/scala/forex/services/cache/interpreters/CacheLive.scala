@@ -3,6 +3,7 @@ package forex.services.cache.interpreters
 import cats.Parallel
 import cats.data.EitherT
 import cats.effect._
+import cats.implicits.catsSyntaxApplicativeError
 import cats.syntax.all._
 import dev.profunktor.redis4cats.RedisCommands
 import dev.profunktor.redis4cats.effect.Log
@@ -39,8 +40,7 @@ class CacheLive[F[_]: Concurrent: Timer: Parallel]
   override def setExpiring(rates: List[Rate]): F[Unit] =
     rates.traverse_ { rate => {
       val key = cacheKey(rate.pair)
-      RedisTransaction(redis).exec(
-        redis.hSet(key, "price", rate.price.value.toString) ::
+      RedisTransaction(redis).exec(redis.hSet(key, "price", rate.price.value.toString) ::
           redis.hSet(key, "timestamp", rate.timestamp.value.toString) ::
           redis.expire(key, config.redis.cacheExpiresAfter) ::
           HNil)

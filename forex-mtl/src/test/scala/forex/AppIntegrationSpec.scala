@@ -1,5 +1,6 @@
 package forex
 
+import cats.effect.concurrent.Semaphore
 import cats.effect.{ContextShift, IO, Resource, Timer}
 import cats.syntax.all._
 import forex.config._
@@ -40,7 +41,7 @@ class AppIntegrationSpec extends AnyFunSuite with Matchers {
         _ = firstResponse.from.shouldBe(USD)
         _ = firstResponse.to.shouldBe(JPY)
 
-        _ <- List.fill(10000)(request).traverse_ { request =>
+        _ <- executeInParallel(request) { request =>
           for {
             nextResponse <- httpClient.expect[GetApiResponse](request)
             _ = nextResponse.from.shouldBe(USD)
@@ -62,4 +63,13 @@ class AppIntegrationSpec extends AnyFunSuite with Matchers {
       }
     ping(15)
   }
+
+  def executeInParallel(request: Request[IO])(f: Request[IO] => IO[Unit]): IO[Unit] =
+    Semaphore[IO](250).flatMap { semaphore =>
+      List.fill(10000)(request).parTraverse_ { request =>
+        semaphore.withPermit {
+          f(request)
+        }
+      }
+    }
 }
