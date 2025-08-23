@@ -4,13 +4,8 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 case class ApplicationConfig(
     http: HttpConfig,
-    forex: ForexConfig,
     oneFrame: OneFrameConfig,
     redis: RedisConfig
-)
-
-case class ForexConfig(
-    exchangeRateExpiresAfter: FiniteDuration = 10.seconds
 )
 
 case class HttpConfig(
@@ -26,5 +21,7 @@ case class OneFrameConfig(
 
 case class RedisConfig(
     host: String = "localhost",
-    port: Int = 6379
+    port: Int = 6379,
+    cacheKeyPrefix: String = "rate",
+    cacheExpiresAfter: FiniteDuration = 4.minutes
 )

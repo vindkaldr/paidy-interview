@@ -11,6 +11,7 @@ import org.http4s.{Method, Request}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
+import java.util.UUID
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
@@ -22,12 +23,12 @@ class AppIntegrationSpec extends AnyFunSuite with Matchers {
   val clientResource: Resource[IO, Client[IO]] = BlazeClientBuilder[IO](executionContext).resource
 
   test("gets and caches rate when requested") {
-    val appStream = new Application[IO].stream(executionContext, ApplicationConfig(
+    val config = ApplicationConfig(
       HttpConfig("0.0.0.0", 8079, 40.seconds),
-      ForexConfig(4.minutes),
       OneFrameConfig(),
-      RedisConfig()
-    ))
+      RedisConfig(cacheKeyPrefix = s"test:rate:${UUID.randomUUID()}", cacheExpiresAfter = 1.minute)
+    )
+    val appStream = new Application[IO].stream(executionContext, config)
     (for {
       fiber <- appStream.compile.drain.start
       firstResponse <- clientResource.use { client =>

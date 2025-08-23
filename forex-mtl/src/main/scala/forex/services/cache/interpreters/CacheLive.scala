@@ -22,7 +22,7 @@ class CacheLive[F[_]: Concurrent: Timer: Parallel]
 
   override def get(pair: Rate.Pair): F[Either[Error, Rate]] =
     redisResource.use { redis =>
-      EitherT(redis.hmGet(s"${pair.from}:${pair.to}", "price", "timestamp").attempt)
+      EitherT(redis.hmGet(cacheKey(pair), "price", "timestamp").attempt)
         .leftMap[Error](e => CacheLookupFailed(s"Redis error: $e"))
         .subflatMap { fields =>
             for {
@@ -41,12 +41,14 @@ class CacheLive[F[_]: Concurrent: Timer: Parallel]
   override def setExpiring(rates: List[Rate]): F[Unit] =
     redisResource.use { redis =>
       rates.traverse_ { rate => {
-        val key = s"${rate.pair.from}:${rate.pair.to}"
+        val key = cacheKey(rate.pair)
         RedisTransaction(redis)
           .exec(redis.hmSet(key, Map("price" -> rate.price.value.toString, "timestamp" -> rate.timestamp.value.toString)) ::
-            redis.expire(key, config.forex.exchangeRateExpiresAfter) :: HNil
+            redis.expire(key, config.redis.cacheExpiresAfter) :: HNil
           )
         }
       }
     }
+
+  private def cacheKey(pair: Rate.Pair) = s"${config.redis.cacheKeyPrefix}:${pair.from}:${pair.to}"
 }
