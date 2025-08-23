@@ -1,4 +1,4 @@
-package forex.http
+package forex.http.rates
 
 import cats.effect.IO
 import forex.domain.Currency.{JPY, USD}
