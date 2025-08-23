@@ -12,8 +12,9 @@ import org.http4s.client.Client
 import org.http4s.implicits._
 import org.http4s.server.middleware.{AutoSlash, Timeout}
 
-class Module[F[_]: ConcurrentEffect: Parallel: Timer](config: ApplicationConfig, httpClient: Client[F])
-                                                     (implicit log: Log[F], contextShift: ContextShift[F]) {
+class Module[F[_]: ConcurrentEffect: Parallel: Timer]
+  (config: ApplicationConfig, httpClient: Client[F])
+  (implicit log: Log[F], contextShift: ContextShift[F]) {
 
   private val ratesService: RatesService[F] = RatesServices.live[F](config, httpClient)
 

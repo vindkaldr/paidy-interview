@@ -12,6 +12,7 @@ object Dependencies {
     val pureConfig = "0.17.4"
 
     val kindProjector  = "0.13.2"
+    val slf4j          = "1.7.0"
     val logback        = "1.2.3"
     val scalaCheck     = "1.15.3"
     val scalaTest      = "3.2.7"
@@ -41,6 +42,7 @@ object Dependencies {
     lazy val kindProjector = "org.typelevel" %% "kind-projector" % Versions.kindProjector cross CrossVersion.full
 
     // Runtime
+    lazy val slf4j   = "org.typelevel" %% "log4cats-slf4j" % Versions.slf4j
     lazy val logback = "ch.qos.logback" % "logback-classic" % Versions.logback
 
     // Test

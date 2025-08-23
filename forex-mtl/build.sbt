@@ -1,4 +1,4 @@
-import Dependencies._
+import Dependencies.*
 
 name := "forex"
 version := "1.0.1"
@@ -64,6 +64,7 @@ libraryDependencies ++= Seq(
   Libraries.circeParser,
   Libraries.redis4cats,
   Libraries.pureConfig,
+  Libraries.slf4j,
   Libraries.logback,
   Libraries.scalaTest      % Test,
   Libraries.scalaCheck     % Test,
