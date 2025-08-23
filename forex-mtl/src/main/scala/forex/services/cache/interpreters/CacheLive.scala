@@ -17,36 +17,32 @@ import forex.services.cache.errors._
 import java.time.OffsetDateTime
 
 class CacheLive[F[_]: Concurrent: Timer: Parallel]
-  (config: ApplicationConfig, redisResource: Resource[F, RedisCommands[F, String, String]])
+  (config: ApplicationConfig, redis: RedisCommands[F, String, String])
   (implicit log: Log[F]) extends Algebra[F] {
 
   override def get(pair: Rate.Pair): F[Either[Error, Rate]] =
-    redisResource.use { redis =>
-      EitherT(redis.hmGet(cacheKey(pair), "price", "timestamp").attempt)
-        .leftMap[Error](e => CacheLookupFailed(s"Redis error: $e"))
-        .subflatMap { fields =>
-            for {
-              priceStr <- fields.get("price").toRight(Error.CacheLookupFailed("No price field"))
-              timestampStr <- fields.get("timestamp").toRight(Error.CacheLookupFailed("No timestamp field"))
+    EitherT(redis.hmGet(cacheKey(pair), "price", "timestamp").attempt)
+      .leftMap[Error](e => CacheLookupFailed(s"Redis error: $e"))
+      .subflatMap { fields =>
+          for {
+            priceStr <- fields.get("price").toRight(Error.CacheLookupFailed("No price field"))
+            timestampStr <- fields.get("timestamp").toRight(Error.CacheLookupFailed("No timestamp field"))
 
-              price <- Either.catchNonFatal(Price(BigDecimal(priceStr)))
-                .leftMap(_ => Error.CacheLookupFailed("Cannot parse price field"))
-              timestamp <- Either.catchNonFatal(Timestamp(OffsetDateTime.parse(timestampStr)))
-                .leftMap(_ => Error.CacheLookupFailed("Cannot parse timestamp field"))
+            price <- Either.catchNonFatal(Price(BigDecimal(priceStr)))
+              .leftMap(_ => Error.CacheLookupFailed("Cannot parse price field"))
+            timestamp <- Either.catchNonFatal(Timestamp(OffsetDateTime.parse(timestampStr)))
+              .leftMap(_ => Error.CacheLookupFailed("Cannot parse timestamp field"))
 
-            } yield Rate(pair, price, timestamp)
-      }.value
-    }
+          } yield Rate(pair, price, timestamp)
+    }.value
 
   override def setExpiring(rates: List[Rate]): F[Unit] =
-    redisResource.use { redis =>
-      rates.traverse_ { rate => {
-        val key = cacheKey(rate.pair)
-        RedisTransaction(redis)
-          .exec(redis.hmSet(key, Map("price" -> rate.price.value.toString, "timestamp" -> rate.timestamp.value.toString)) ::
-            redis.expire(key, config.redis.cacheExpiresAfter) :: HNil
-          )
-        }
+    rates.traverse_ { rate => {
+      val key = cacheKey(rate.pair)
+      RedisTransaction(redis)
+        .exec(redis.hmSet(key, Map("price" -> rate.price.value.toString, "timestamp" -> rate.timestamp.value.toString)) ::
+          redis.expire(key, config.redis.cacheExpiresAfter) :: HNil
+        )
       }
     }
 

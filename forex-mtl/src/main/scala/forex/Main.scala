@@ -3,6 +3,7 @@ package forex
 import cats.Parallel
 import cats.effect._
 import dev.profunktor.redis4cats.effect.Log
+import dev.profunktor.redis4cats.{Redis, RedisCommands}
 import forex.config._
 import fs2.Stream
 import org.http4s.blaze.client.BlazeClientBuilder
@@ -23,13 +24,20 @@ object Main extends IOApp {
 class Application[F[_]: ConcurrentEffect: Parallel: Timer](implicit cs: ContextShift[F]) {
   implicit val log: Log[F] = Log.NoOp.instance
 
-  def httpClient(context: ExecutionContext): Resource[F, Client[F]] = BlazeClientBuilder[F](context).resource
+  def httpClient(context: ExecutionContext): Resource[F, Client[F]] =
+    BlazeClientBuilder[F](context).resource
+
+  def redisClient(config: ApplicationConfig): Resource[F, RedisCommands[F, String, String]] =
+    Redis[F].utf8(s"redis://${config.redis.host}:${config.redis.port}")
 
   def stream(context: ExecutionContext, config: ApplicationConfig): Stream[F, ExitCode] =
-    Stream.resource(httpClient(context)).flatMap { httpClient =>
-      BlazeServerBuilder[F](context)
+    for {
+      httpClient <- Stream.resource(httpClient(context))
+      redis  <- Stream.resource(redisClient(config))
+      module = new Module[F](config, httpClient, redis)
+      exitCode <- BlazeServerBuilder[F](context)
         .bindHttp(config.http.port, config.http.host)
-        .withHttpApp(new Module[F](config, httpClient).httpApp)
+        .withHttpApp(module.httpApp)
         .serve
-    }
+    } yield exitCode
 }

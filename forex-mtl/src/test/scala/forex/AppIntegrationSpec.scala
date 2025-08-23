@@ -1,6 +1,7 @@
 package forex
 
 import cats.effect.{ContextShift, IO, Resource, Timer}
+import cats.syntax.all._
 import forex.config._
 import forex.domain.Currency.{JPY, USD}
 import forex.http.rates.Protocol.GetApiResponse
@@ -20,29 +21,35 @@ class AppIntegrationSpec extends AnyFunSuite with Matchers {
   implicit val cs: ContextShift[IO] = IO.contextShift(executionContext)
   implicit val timer: Timer[IO] = IO.timer(executionContext)
 
-  val clientResource: Resource[IO, Client[IO]] = BlazeClientBuilder[IO](executionContext).resource
+  val httpClientResource: Resource[IO, Client[IO]] = BlazeClientBuilder[IO](executionContext).resource
 
   test("gets and caches rate when requested") {
-    val config = ApplicationConfig(
-      HttpConfig("0.0.0.0", 8079, 40.seconds),
-      OneFrameConfig(),
-      RedisConfig(cacheKeyPrefix = s"test:rate:${UUID.randomUUID()}", cacheExpiresAfter = 1.minute)
-    )
-    val appStream = new Application[IO].stream(executionContext, config)
-    (for {
-      fiber <- appStream.compile.drain.start
-      firstResponse <- clientResource.use { client =>
-        client.expect[GetApiResponse](Request[IO](Method.GET, uri"http://localhost:8079/rates?from=USD&to=JPY"))
-      }
-      _ = firstResponse.from.shouldBe(USD)
-      _ = firstResponse.to.shouldBe(JPY)
-      secondResponse <- clientResource.use { client =>
-        client.expect[GetApiResponse](Request[IO](Method.GET, uri"http://localhost:8079/rates?from=USD&to=JPY"))
-      }
-      _ = secondResponse.from.shouldBe(USD)
-      _ = secondResponse.to.shouldBe(JPY)
-      _ = secondResponse.timestamp.shouldBe(firstResponse.timestamp)
-      _ <- fiber.cancel
-    } yield ()).unsafeRunSync()
+    httpClientResource.use { httpClient =>
+      val appStream = new Application[IO].stream(executionContext,
+        ApplicationConfig(
+          HttpConfig("0.0.0.0", 8079, 40.seconds),
+          OneFrameConfig(),
+          RedisConfig(cacheKeyPrefix = s"test:rate:${UUID.randomUUID()}", cacheExpiresAfter = 4.minutes)
+        ))
+      for {
+        fiber <- appStream.compile.drain.start
+        _ <- IO.sleep(3.seconds)
+
+        request = Request[IO](Method.GET, uri"http://localhost:8079/rates?from=USD&to=JPY")
+        firstResponse <- httpClient.expect[GetApiResponse](request)
+        _ = firstResponse.from.shouldBe(USD)
+        _ = firstResponse.to.shouldBe(JPY)
+
+        _ <- List.fill(10000)(request).traverse_ { request =>
+          for {
+            nextResponse <- httpClient.expect[GetApiResponse](request)
+            _ = nextResponse.from.shouldBe(USD)
+            _ = nextResponse.to.shouldBe(JPY)
+            _ = nextResponse.timestamp.shouldBe(firstResponse.timestamp)
+          } yield ()
+        }
+        _ <- fiber.cancel
+      } yield ()
+    }.unsafeRunSync()
   }
 }
