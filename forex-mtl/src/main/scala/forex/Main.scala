@@ -10,26 +10,26 @@ import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.client.Client
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.ExecutionContext.global
 
 object Main extends IOApp {
   override def run(args: List[String]): IO[ExitCode] = {
-    BlazeClientBuilder[IO](global).resource.use { httpClient =>
-      new Application[IO].stream(executionContext, httpClient).compile.drain.as(ExitCode.Success)
-    }
+    for {
+      config <- Config.stream[IO]("app").compile.lastOrError
+      exitCode <- new Application[IO].stream(executionContext, config).compile.drain.as(ExitCode.Success)
+    } yield exitCode
   }
 }
 
 class Application[F[_]: ConcurrentEffect: Parallel: Timer](implicit cs: ContextShift[F]) {
   implicit val log: Log[F] = Log.NoOp.instance
 
-  def stream(ec: ExecutionContext, httpClient: Client[F]): Stream[F, Unit] =
-    for {
-      config <- Config.stream("app")
-      module = new Module[F](config, httpClient)
-      _ <- BlazeServerBuilder[F](ec)
-            .bindHttp(config.http.port, config.http.host)
-            .withHttpApp(module.httpApp)
-            .serve
-    } yield ()
+  def httpClient(context: ExecutionContext): Resource[F, Client[F]] = BlazeClientBuilder[F](context).resource
+
+  def stream(context: ExecutionContext, config: ApplicationConfig): Stream[F, ExitCode] =
+    Stream.resource(httpClient(context)).flatMap { httpClient =>
+      BlazeServerBuilder[F](context)
+        .bindHttp(config.http.port, config.http.host)
+        .withHttpApp(new Module[F](config, httpClient).httpApp)
+        .serve
+    }
 }
