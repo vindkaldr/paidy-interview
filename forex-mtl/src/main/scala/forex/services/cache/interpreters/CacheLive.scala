@@ -39,10 +39,11 @@ class CacheLive[F[_]: Concurrent: Timer: Parallel]
   override def setExpiring(rates: List[Rate]): F[Unit] =
     rates.traverse_ { rate => {
       val key = cacheKey(rate.pair)
-      RedisTransaction(redis)
-        .exec(redis.hmSet(key, Map("price" -> rate.price.value.toString, "timestamp" -> rate.timestamp.value.toString)) ::
-          redis.expire(key, config.redis.cacheExpiresAfter) :: HNil
-        )
+      RedisTransaction(redis).exec(
+        redis.hSet(key, "price", rate.price.value.toString) ::
+          redis.hSet(key, "timestamp", rate.timestamp.value.toString) ::
+          redis.expire(key, config.redis.cacheExpiresAfter) ::
+          HNil)
       }
     }
 
