@@ -30,6 +30,7 @@ class RatesHttpRoutes[F[_]: Sync](rates: RatesProgram[F]) extends Http4sDsl[F] {
           case Right(None) => NotFound(s"Rate not found: ${request.from} to ${request.to}")
         }
       }
+    case GET -> Root / "health" => Ok("OK")
   }
 
   val routes: HttpRoutes[F] = httpRoutes

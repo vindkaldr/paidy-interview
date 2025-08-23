@@ -8,7 +8,7 @@ import forex.http.rates.Protocol.GetApiResponse
 import org.http4s.blaze.client.BlazeClientBuilder
 import org.http4s.client.Client
 import org.http4s.implicits.http4sLiteralsSyntax
-import org.http4s.{Method, Request}
+import org.http4s.{Method, Request, Status, Uri}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
@@ -33,7 +33,7 @@ class AppIntegrationSpec extends AnyFunSuite with Matchers {
         ))
       for {
         fiber <- appStream.compile.drain.start
-        _ <- IO.sleep(3.seconds)
+        _ <- waitUntilAppIsReady(httpClient, uri"http://localhost:8079/health")
 
         request = Request[IO](Method.GET, uri"http://localhost:8079/rates?from=USD&to=JPY")
         firstResponse <- httpClient.expect[GetApiResponse](request)
@@ -51,5 +51,15 @@ class AppIntegrationSpec extends AnyFunSuite with Matchers {
         _ <- fiber.cancel
       } yield ()
     }.unsafeRunSync()
+  }
+
+  def waitUntilAppIsReady(client: Client[IO], uri: Uri): IO[Unit] = {
+    def ping(remaining: Int): IO[Unit] =
+      client.status(Request[IO](Method.GET, uri)).attempt.flatMap {
+        case Right(Status.Ok) => IO.pure(())
+        case _ if remaining > 0 => IO.sleep(200.millis).flatMap(_ => ping(remaining - 1))
+        case _ => IO.raiseError(new RuntimeException("Server did not start in time"))
+      }
+    ping(15)
   }
 }
