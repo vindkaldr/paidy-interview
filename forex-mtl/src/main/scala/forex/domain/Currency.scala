@@ -27,17 +27,19 @@ object Currency {
     case USD => "USD"
   }
 
-  def fromString(s: String): Currency = s.toUpperCase match {
-    case "AUD" => AUD
-    case "CAD" => CAD
-    case "CHF" => CHF
-    case "EUR" => EUR
-    case "GBP" => GBP
-    case "NZD" => NZD
-    case "JPY" => JPY
-    case "SGD" => SGD
-    case "USD" => USD
-  }
+  def fromString(s: String): Option[Currency] =
+    s.toUpperCase match {
+      case "AUD" => Some(AUD)
+      case "CAD" => Some(CAD)
+      case "CHF" => Some(CHF)
+      case "EUR" => Some(EUR)
+      case "GBP" => Some(GBP)
+      case "NZD" => Some(NZD)
+      case "JPY" => Some(JPY)
+      case "SGD" => Some(SGD)
+      case "USD" => Some(USD)
+      case _ => None
+    }
 
   def all(): List[Currency] =
     List(AUD, CAD, CHF, EUR, GBP, NZD, JPY, SGD, USD)

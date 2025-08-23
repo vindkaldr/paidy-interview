@@ -21,7 +21,7 @@ object OneFrameRate {
   import org.http4s.circe._
 
   implicit val currencyDecoder: Decoder[Currency] = Decoder.decodeString.emap { str =>
-    Some(Currency.fromString(str)).toRight(s"Invalid currency: $str")
+    Currency.fromString(str).toRight(s"Invalid currency: $str")
   }
   implicit val priceDecoder: Decoder[Price] = deriveDecoder
   implicit val decoder: Decoder[OneFrameRate] = Decoder.forProduct6(
