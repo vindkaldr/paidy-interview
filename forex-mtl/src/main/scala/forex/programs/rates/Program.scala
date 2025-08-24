@@ -2,13 +2,14 @@ package forex.programs.rates
 
 import cats.data.EitherT
 import cats.effect.Sync
+import cats.implicits.{catsSyntaxApplicativeId, toFlatMapOps}
 import forex.domain.Rate.Pair
 import forex.domain._
-import forex.programs.rates.errors._
+import forex.programs.rates.errors.{Error, _}
 import forex.services.{CacheService, RatesService}
+//import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 import java.time.OffsetDateTime
-//import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 class Program[F[_]: Sync](ratesService: RatesService[F], cacheService: CacheService[F]) extends Algebra[F] {
 //  private val logger = Slf4jLogger.getLogger[F]
@@ -29,6 +30,15 @@ class Program[F[_]: Sync](ratesService: RatesService[F], cacheService: CacheServ
         .value
     }
   }
+
+  override def buildCache(): F[Unit] =
+    cacheService.get(Rate.allPairs().head).flatMap {
+      case Right(_) => ().pure[F]
+      case Left(_) => ratesService.get(Rate.allPairs()).flatMap {
+        case Right(rates) => cacheService.setExpiring(rates)
+        case Left(_)      => ().pure[F]
+      }
+    }
 }
 
 object Program {

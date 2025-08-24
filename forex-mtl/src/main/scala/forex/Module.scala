@@ -18,7 +18,7 @@ class Module[F[_]: ConcurrentEffect: Timer]
 
   private val cacheService: CacheService[F] = CacheServices.live[F](config, redis)
 
-  private val ratesProgram: RatesProgram[F] = RatesProgram[F](ratesService, cacheService)
+  val ratesProgram: RatesProgram[F] = RatesProgram[F](ratesService, cacheService)
 
   private val ratesHttpRoutes: HttpRoutes[F] = new RatesHttpRoutes[F](ratesProgram).routes
 

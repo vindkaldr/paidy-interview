@@ -8,7 +8,6 @@ import forex.domain.Rate
 import forex.http.rates.Protocol._
 import forex.services.cache.Algebra
 import forex.services.cache.errors.Error
-import io.circe.generic.auto._
 import io.circe.parser._
 import io.circe.syntax.EncoderOps
 
