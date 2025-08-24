@@ -78,9 +78,9 @@ class CacheServiceSpy(rate: Either[CacheError, Rate], capturedPair: Ref[IO, Pair
 object CacheServiceSpy {
   def stubRate(rate: Either[CacheError, Rate]): IO[(CacheServiceSpy, Ref[IO, Pair], Ref[IO, List[Rate]])] = {
     for {
-      capturedPairs  <- Ref.of[IO, Rate.Pair](Pair(USD, USD))
-      capturedRates  <- Ref.of[IO, List[Rate]](List())
-      service       = new CacheServiceSpy(rate, capturedPairs, capturedRates)
+      capturedPairs <- Ref.of[IO, Rate.Pair](Pair(USD, USD))
+      capturedRates <- Ref.of[IO, List[Rate]](List())
+      service = new CacheServiceSpy(rate, capturedPairs, capturedRates)
     } yield (service, capturedPairs, capturedRates)
   }
 }
@@ -93,8 +93,8 @@ class RateServiceSpy(rates: Either[RatesError, List[Rate]], capturedPairs: Ref[I
 object RateServiceSpy {
   def stubRates(rates: Either[RatesError, List[Rate]]): IO[(RateServiceSpy, Ref[IO, List[Rate.Pair]])] =
     for {
-      capturedPairs  <- Ref.of[IO, List[Rate.Pair]](List())
-      service       = new RateServiceSpy(rates, capturedPairs)
+      capturedPairs <- Ref.of[IO, List[Rate.Pair]](List())
+      service = new RateServiceSpy(rates, capturedPairs)
     } yield (service, capturedPairs)
 }
 

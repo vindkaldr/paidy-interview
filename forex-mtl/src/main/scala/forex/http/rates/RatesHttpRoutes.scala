@@ -26,13 +26,13 @@ class RatesHttpRoutes[F[_]: Sync](rates: RatesProgram[F]) extends Http4sDsl[F] {
       request match {
         case Left(error) => BadRequest(error)
         case Right(request) => rates.get(request).flatMap {
-          case Left(error) => InternalServerError(error.toString)
+          case Left(_) => InternalServerError("Unexpected error occurred")
           case Right(Some(rate)) => Ok(rate.asGetApiResponse)
           case Right(None) => NotFound(s"Rate not found: ${request.from} to ${request.to}")
         }
       }
     case GET -> Root / "health" =>
-      val pair = Rate.allPairs().head
+      val pair = Rate.allPairs().last
       rates.get(GetRatesRequest(pair.from, pair.to)).flatMap {
         case Right(_) => Ok("Healthy")
         case Left(_) => ServiceUnavailable("Unhealthy")
