@@ -28,9 +28,9 @@ class AppIntegrationSpec extends AnyFunSuite with Matchers {
     httpClientResource.use { httpClient =>
       val appStream = new Application[IO].stream(executionContext,
         ApplicationConfig(
-          HttpConfig("0.0.0.0", 8079, 40.seconds),
-          OneFrameConfig(),
-          RedisConfig(cacheKeyPrefix = s"test:rate:${UUID.randomUUID()}", cacheExpiresAfter = 4.minutes)
+          http = HttpConfig(port = 8079),
+          oneFrame = OneFrameConfig(),
+          redis = RedisConfig(cacheKeyPrefix = s"test:rate:${UUID.randomUUID()}")
         ))
       for {
         fiber <- appStream.compile.drain.start

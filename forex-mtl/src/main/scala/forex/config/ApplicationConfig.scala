@@ -9,9 +9,9 @@ case class ApplicationConfig(
 )
 
 case class HttpConfig(
-    host: String,
-    port: Int,
-    timeout: FiniteDuration
+    host: String = "localhost",
+    port: Int = 8080,
+    timeout: FiniteDuration = 1.second
 )
 
 case class OneFrameConfig(
@@ -23,5 +23,7 @@ case class RedisConfig(
     host: String = "localhost",
     port: Int = 6379,
     cacheKeyPrefix: String = "rate",
-    cacheExpiresAfter: FiniteDuration = 1.minutes
+    cacheExpiresAfter: FiniteDuration = 5.minutes,
+    cacheBuiltAtEvery: FiniteDuration = 4.minutes,
+    cacheBuiltIfMissingAtEvery: FiniteDuration = 5.seconds
 )

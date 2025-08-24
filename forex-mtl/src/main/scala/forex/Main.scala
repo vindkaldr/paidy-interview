@@ -9,9 +9,8 @@ import fs2.Stream
 import org.http4s.blaze.client.BlazeClientBuilder
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.client.Client
-
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.DurationInt
 
 object Main extends IOApp {
   override def run(args: List[String]): IO[ExitCode] = {
@@ -23,6 +22,7 @@ object Main extends IOApp {
 }
 
 class Application[F[_]: ConcurrentEffect: Timer](implicit cs: ContextShift[F]) {
+  private val logger = Slf4jLogger.getLogger[F]
   implicit val log: Log[F] = Log.NoOp.instance
 
   private def httpClient(context: ExecutionContext): Resource[F, Client[F]] =
@@ -31,14 +31,15 @@ class Application[F[_]: ConcurrentEffect: Timer](implicit cs: ContextShift[F]) {
   private def redisClient(config: ApplicationConfig): Resource[F, RedisCommands[F, String, String]] =
     Redis[F].utf8(s"redis://${config.redis.host}:${config.redis.port}")
 
-  private def inBackground(program: RatesProgram[F]): Stream[F, Unit] = {
+  private def inBackground(config: ApplicationConfig, program: RatesProgram[F]): Stream[F, Unit] = {
     Stream.eval(program.buildCache()) ++
-      Stream.awakeDelay[F](30.seconds).evalMap { _ => program.buildCache() }
-        .concurrently(Stream.awakeDelay[F](5.seconds).evalMap { _ => program.buildCacheIfMissing() })
+      Stream.awakeDelay[F](config.redis.cacheBuiltAtEvery).evalMap { _ => program.buildCache() }
+        .concurrently(Stream.awakeDelay[F](config.redis.cacheBuiltIfMissingAtEvery).evalMap { _ => program.buildCacheIfMissing() })
   }
 
-  def stream(context: ExecutionContext, config: ApplicationConfig): Stream[F, ExitCode] =
+  def stream(context: ExecutionContext, config: ApplicationConfig): Stream[F, ExitCode] = {
     for {
+      _ <- Stream.eval(logger.info(config.toString))
       httpClient <- Stream.resource(httpClient(context))
       redis  <- Stream.resource(redisClient(config))
       module = new Module[F](config, httpClient, redis)
@@ -46,6 +47,7 @@ class Application[F[_]: ConcurrentEffect: Timer](implicit cs: ContextShift[F]) {
         .bindHttp(config.http.port, config.http.host)
         .withHttpApp(module.httpApp)
         .serve
-        .concurrently(inBackground(module.ratesProgram))
+        .concurrently(inBackground(config, module.ratesProgram))
     } yield exitCode
+  }
 }
