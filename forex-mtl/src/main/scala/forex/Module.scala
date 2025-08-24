@@ -1,9 +1,7 @@
 package forex
 
-import cats.Parallel
 import cats.effect.{ConcurrentEffect, Timer}
 import dev.profunktor.redis4cats.RedisCommands
-import dev.profunktor.redis4cats.effect.Log
 import forex.config.ApplicationConfig
 import forex.http.rates.RatesHttpRoutes
 import forex.programs._
@@ -13,9 +11,8 @@ import org.http4s.client.Client
 import org.http4s.implicits._
 import org.http4s.server.middleware.{AutoSlash, Timeout}
 
-class Module[F[_]: ConcurrentEffect: Parallel: Timer]
-  (config: ApplicationConfig, httpClient: Client[F], redis: RedisCommands[F, String, String])
-  (implicit log: Log[F]) {
+class Module[F[_]: ConcurrentEffect: Timer]
+    (config: ApplicationConfig, httpClient: Client[F], redis: RedisCommands[F, String, String]) {
 
   private val ratesService: RatesService[F] = RatesServices.live[F](config, httpClient)
 

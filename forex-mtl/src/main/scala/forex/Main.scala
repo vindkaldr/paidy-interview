@@ -1,6 +1,5 @@
 package forex
 
-import cats.Parallel
 import cats.effect._
 import dev.profunktor.redis4cats.effect.Log
 import dev.profunktor.redis4cats.{Redis, RedisCommands}
@@ -21,7 +20,7 @@ object Main extends IOApp {
   }
 }
 
-class Application[F[_]: ConcurrentEffect: Parallel: Timer](implicit cs: ContextShift[F]) {
+class Application[F[_]: ConcurrentEffect: Timer](implicit cs: ContextShift[F]) {
   implicit val log: Log[F] = Log.NoOp.instance
 
   def httpClient(context: ExecutionContext): Resource[F, Client[F]] =
