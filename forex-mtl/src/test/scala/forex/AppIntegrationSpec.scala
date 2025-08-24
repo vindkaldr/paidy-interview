@@ -24,7 +24,7 @@ class AppIntegrationSpec extends AnyFunSuite with Matchers {
 
   val httpClientResource: Resource[IO, Client[IO]] = BlazeClientBuilder[IO](executionContext).resource
 
-  test("returns rates from cache") {
+  test("returns rates from cache built on startup") {
     httpClientResource.use { httpClient =>
       val appStream = new Application[IO].stream(executionContext,
         ApplicationConfig(
