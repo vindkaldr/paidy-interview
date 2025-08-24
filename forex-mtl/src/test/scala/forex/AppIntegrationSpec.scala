@@ -42,15 +42,15 @@ class AppIntegrationSpec extends AnyFunSuite with Matchers {
         _ = firstResponse.to.shouldBe(JPY)
         _ = firstResponse.price.value.should (be >= BigDecimal(0) and be <= BigDecimal(1))
 
-        _ <- executeInParallel(request) { request =>
+        _ <- executeInParallel(times = 10000, request)({ request =>
           for {
             nextResponse <- httpClient.expect[GetApiResponse](request)
             _ = nextResponse.from.shouldBe(USD)
             _ = nextResponse.to.shouldBe(JPY)
-            _ = nextResponse.price.value.should (be >= BigDecimal(0) and be <= BigDecimal(1))
+            _ = nextResponse.price.value.should(be >= BigDecimal(0) and be <= BigDecimal(1))
             _ = nextResponse.timestamp.shouldBe(firstResponse.timestamp)
           } yield ()
-        }
+        })
         _ <- fiber.cancel
       } yield ()
     }.unsafeRunSync()
@@ -66,9 +66,9 @@ class AppIntegrationSpec extends AnyFunSuite with Matchers {
     ping(15)
   }
 
-  def executeInParallel(request: Request[IO])(f: Request[IO] => IO[Unit]): IO[Unit] =
+  def executeInParallel(times: Int, request: Request[IO])(f: Request[IO] => IO[Unit]): IO[Unit] =
     Semaphore[IO](250).flatMap { semaphore =>
-      List.fill(10000)(request).parTraverse_ { request =>
+      List.fill(times)(request).parTraverse_ { request =>
         semaphore.withPermit {
           f(request)
         }
