@@ -2,7 +2,7 @@ package forex.programs.rates
 
 import cats.data.EitherT
 import cats.effect.Sync
-import cats.implicits.{catsSyntaxApplicativeId, catsSyntaxApply, toFlatMapOps}
+import cats.implicits.{catsSyntaxApplicativeError, catsSyntaxApplicativeId, catsSyntaxApply, toFlatMapOps}
 import forex.domain.Rate.Pair
 import forex.domain._
 import forex.programs.rates.errors.{Error => ProgramError}
@@ -39,7 +39,8 @@ class Program[F[_]: Sync](ratesService: RatesService[F], cacheService: CacheServ
   override def buildCache(): F[Unit] =
     ratesService.get(Rate.allPairs()).flatMap {
       case Right(rates) => cacheService.setExpiring(rates)
-      case Left(_)      => ().pure[F]
+        .handleErrorWith(error => logger.error(error.getMessage))
+      case Left(_) => ().pure[F]
   }
 }
 

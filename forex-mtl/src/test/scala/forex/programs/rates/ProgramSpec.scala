@@ -90,6 +90,19 @@ class ProgramSpec extends AnyFunSuite with Matchers {
     } yield ()).unsafeRunSync()
   }
 
+  test("handles rate service failure") {
+    (for {
+      cacheServiceSpy <- CacheServiceSpy.stubRate(Left(CacheError.CacheLookupFailed("dummy")))
+      (cacheService, _, capturedRates) = cacheServiceSpy
+      rateServiceSpy <- RateServiceSpy.stubRates(Left(RatesError.OneFrameLookupFailed("error during one frame lookup")))
+      (ratesService, capturedPairs) = rateServiceSpy
+      program = new Program(ratesService, cacheService)
+      _ <- program.buildCache()
+      _ <- capturedPairs.get.map(_.shouldBe(Rate.allPairs()))
+      _ <- capturedRates.get.map(_.shouldBe(List()))
+    } yield ()).unsafeRunSync()
+  }
+
   test("loads all rates into cache from one frame when cache is missing") {
     val rate = Rate(Rate.Pair(USD, JPY), Price(BigDecimal(1)), Timestamp(OffsetDateTime.now()))
     (for {
@@ -102,6 +115,35 @@ class ProgramSpec extends AnyFunSuite with Matchers {
       _ <- capturedPair.get.map(_.shouldBe(Rate.allPairs().head))
       _ <- capturedPairs.get.map(_.shouldBe(Rate.allPairs()))
       _ <- capturedRates.get.map(_.shouldBe(List(rate)))
+    } yield ()).unsafeRunSync()
+  }
+
+  test("not loads rates into cache from one frame when cache is present") {
+    val rate = Rate(Rate.Pair(USD, JPY), Price(BigDecimal(1)), Timestamp(OffsetDateTime.now()))
+    (for {
+      cacheServiceSpy <- CacheServiceSpy.stubRate(Right(Some(rate)))
+      (cacheService, capturedPair, capturedRates) = cacheServiceSpy
+      rateServiceSpy <- RateServiceSpy.stubRates(Right(List(rate)))
+      (ratesService, capturedPairs) = rateServiceSpy
+      program = new Program(ratesService, cacheService)
+      _ <- program.buildCacheIfMissing()
+      _ <- capturedPair.get.map(_.shouldBe(Rate.allPairs().head))
+      _ <- capturedPairs.get.map(_.shouldBe(List()))
+      _ <- capturedRates.get.map(_.shouldBe(List()))
+    } yield ()).unsafeRunSync()
+  }
+
+  test("handles rate service failure when cache is missing") {
+    (for {
+      cacheServiceSpy <- CacheServiceSpy.stubRate(Right(None))
+      (cacheService, capturedPair, capturedRates) = cacheServiceSpy
+      rateServiceSpy <- RateServiceSpy.stubRates(Left(RatesError.OneFrameLookupFailed("error during one frame lookup")))
+      (ratesService, capturedPairs) = rateServiceSpy
+      program = new Program(ratesService, cacheService)
+      _ <- program.buildCacheIfMissing()
+      _ <- capturedPair.get.map(_.shouldBe(Rate.allPairs().head))
+      _ <- capturedPairs.get.map(_.shouldBe(Rate.allPairs()))
+      _ <- capturedRates.get.map(_.shouldBe(List()))
     } yield ()).unsafeRunSync()
   }
 }
