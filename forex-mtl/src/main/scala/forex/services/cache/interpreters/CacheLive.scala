@@ -5,6 +5,7 @@ import cats.syntax.all._
 import dev.profunktor.redis4cats.RedisCommands
 import forex.config.ApplicationConfig
 import forex.domain.Rate
+import forex.http.rates.Protocol._
 import forex.services.cache.Algebra
 import forex.services.cache.errors.Error
 import io.circe.generic.auto._
