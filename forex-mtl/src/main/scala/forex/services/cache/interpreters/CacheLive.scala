@@ -22,7 +22,7 @@ class CacheLive[F[_]: Concurrent] (config: ApplicationConfig, redis: RedisComman
 
   override def setExpiring(rates: List[Rate]): F[Unit] =
     rates.traverse_ { rate =>
-      redis.setEx(s"${cacheKey(rate.pair)}", rate.asJson.noSpaces, config.redis.cacheExpiresAfter)
+      redis.set(s"${cacheKey(rate.pair)}", rate.asJson.noSpaces)
     }
 
   private def cacheKey(pair: Rate.Pair) = s"${config.redis.cacheKeyPrefix}:${pair.from}:${pair.to}"

@@ -28,14 +28,17 @@ class Program[F[_]: Sync](ratesService: RatesService[F], cacheService: CacheServ
     }
   }
 
-  override def buildCache(): F[Unit] =
+  override def buildCacheIfMissing(): F[Unit] =
     cacheService.get(Rate.allPairs().head).flatMap {
       case Right(_) => ().pure[F]
-      case Left(_) => ratesService.get(Rate.allPairs()).flatMap {
-        case Right(rates) => cacheService.setExpiring(rates)
-        case Left(_)      => ().pure[F]
-      }
+      case Left(_) => buildCache()
     }
+
+  override def buildCache(): F[Unit] =
+    ratesService.get(Rate.allPairs()).flatMap {
+      case Right(rates) => cacheService.setExpiring(rates)
+      case Left(_)      => ().pure[F]
+  }
 }
 
 object Program {
