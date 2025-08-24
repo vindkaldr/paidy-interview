@@ -33,8 +33,8 @@ class Application[F[_]: ConcurrentEffect: Timer](implicit cs: ContextShift[F]) {
 
   private def inBackground(program: RatesProgram[F]): Stream[F, Unit] = {
     Stream.eval(program.buildCache()) ++
-      Stream.awakeDelay[F](4.minutes).evalMap { _ => program.buildCache() } ++
-      Stream.awakeDelay[F](5.seconds).evalMap { _ => program.buildCacheIfMissing() }
+      Stream.awakeDelay[F](30.seconds).evalMap { _ => program.buildCache() }
+        .concurrently(Stream.awakeDelay[F](5.seconds).evalMap { _ => program.buildCacheIfMissing() })
   }
 
   def stream(context: ExecutionContext, config: ApplicationConfig): Stream[F, ExitCode] =

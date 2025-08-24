@@ -23,5 +23,5 @@ case class RedisConfig(
     host: String = "localhost",
     port: Int = 6379,
     cacheKeyPrefix: String = "rate",
-    cacheExpiresAfter: FiniteDuration = 4.minutes
+    cacheExpiresAfter: FiniteDuration = 1.minutes
 )
