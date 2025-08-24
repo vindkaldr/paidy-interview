@@ -29,7 +29,7 @@ class Program[F[_]: Sync](ratesService: RatesService[F], cacheService: CacheServ
   }
 
   override def buildCacheIfMissing(): F[Unit] =
-    cacheService.get(Rate.allPairs().last).flatMap {
+    cacheService.get(Rate.allPairs().head).flatMap {
       case Right(_) => ().pure[F]
       case Left(_) => buildCache()
     }
