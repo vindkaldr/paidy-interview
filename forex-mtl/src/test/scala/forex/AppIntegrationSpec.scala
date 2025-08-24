@@ -40,12 +40,14 @@ class AppIntegrationSpec extends AnyFunSuite with Matchers {
         firstResponse <- httpClient.expect[GetApiResponse](request)
         _ = firstResponse.from.shouldBe(USD)
         _ = firstResponse.to.shouldBe(JPY)
+        _ = firstResponse.price.value.should (be >= BigDecimal(0) and be <= BigDecimal(1))
 
         _ <- executeInParallel(request) { request =>
           for {
             nextResponse <- httpClient.expect[GetApiResponse](request)
             _ = nextResponse.from.shouldBe(USD)
             _ = nextResponse.to.shouldBe(JPY)
+            _ = nextResponse.price.value.should (be >= BigDecimal(0) and be <= BigDecimal(1))
             _ = nextResponse.timestamp.shouldBe(firstResponse.timestamp)
           } yield ()
         }
