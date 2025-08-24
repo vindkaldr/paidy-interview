@@ -35,8 +35,8 @@ class AppIntegrationSpec extends AnyFunSuite with Matchers {
       for {
         fiber <- appStream.compile.drain.start
         _ <- waitUntilAppIsReady(httpClient, uri"http://localhost:8079/health")
-
         request = Request[IO](Method.GET, uri"http://localhost:8079/rates?from=USD&to=JPY")
+
         firstResponse <- httpClient.expect[GetApiResponse](request)
         _ = firstResponse.from.shouldBe(USD)
         _ = firstResponse.to.shouldBe(JPY)

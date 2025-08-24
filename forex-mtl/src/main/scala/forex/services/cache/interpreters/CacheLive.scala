@@ -12,11 +12,12 @@ import io.circe.parser._
 import io.circe.syntax.EncoderOps
 
 class CacheLive[F[_]: Concurrent] (config: ApplicationConfig, redis: RedisCommands[F, String, String]) extends Algebra[F] {
-  override def get(pair: Rate.Pair): F[Error Either Rate] = {
+  override def get(pair: Rate.Pair): F[Error Either Option[Rate]] = {
     redis.get(cacheKey(pair)).map {
       case Some(json) => decode[Rate](json)
-        .leftMap[Error](err => Error.CacheLookupFailed(s"Failed to decode JSON: ${err.getMessage}"))
-      case None => Left(Error.CacheLookupFailed("Cache miss"))
+        .map(Option(_))
+        .leftMap(error => Error.CacheLookupFailed(s"Failed to decode: ${error.getMessage}"))
+      case None => Right(None)
     }
   }
 
