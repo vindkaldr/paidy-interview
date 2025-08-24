@@ -3,8 +3,9 @@ package rates
 
 import cats.effect.Sync
 import cats.syntax.flatMap._
-import forex.domain.Currency
+import forex.domain.{Currency, Rate}
 import forex.programs.RatesProgram
+import forex.programs.rates.Protocol.GetRatesRequest
 import forex.programs.rates.{Protocol => RatesProgramProtocol}
 import org.http4s.HttpRoutes
 import org.http4s.dsl.Http4sDsl
@@ -30,7 +31,12 @@ class RatesHttpRoutes[F[_]: Sync](rates: RatesProgram[F]) extends Http4sDsl[F] {
           case Right(None) => NotFound(s"Rate not found: ${request.from} to ${request.to}")
         }
       }
-    case GET -> Root / "health" => Ok("OK")
+    case GET -> Root / "health" =>
+      val pair = Rate.allPairs().head
+      rates.get(GetRatesRequest(pair.from, pair.to)).flatMap {
+        case Right(_) => Ok("Healthy")
+        case Left(_) => ServiceUnavailable("Unhealthy")
+      }
   }
 
   val routes: HttpRoutes[F] = httpRoutes

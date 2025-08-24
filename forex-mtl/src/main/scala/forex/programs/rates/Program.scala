@@ -5,7 +5,7 @@ import cats.effect.Sync
 import cats.implicits.{catsSyntaxApplicativeId, toFlatMapOps}
 import forex.domain.Rate.Pair
 import forex.domain._
-import forex.programs.rates.errors.{Error, _}
+import forex.programs.rates.errors.Error
 import forex.services.{CacheService, RatesService}
 //import org.typelevel.log4cats.slf4j.Slf4jLogger
 
@@ -23,10 +23,7 @@ class Program[F[_]: Sync](ratesService: RatesService[F], cacheService: CacheServ
     else {
       EitherT(cacheService.get(pair))
         .map(rate => Option(rate))
-        .leftFlatMap(_ => EitherT(ratesService.get(Rate.allPairs()))
-          .semiflatTap(rates => cacheService.setExpiring(rates))
-          .map(_.find(_.pair == pair)))
-        .leftMap(toProgramError)
+        .leftMap[Error](_ => Error.RateLookupFailed("error"))
         .value
     }
   }

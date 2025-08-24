@@ -4,7 +4,6 @@ import cats.effect.IO
 import forex.domain.Currency.{JPY, USD}
 import forex.domain.Rate.Pair
 import forex.domain.{Price, Rate, Timestamp}
-import forex.http.rates.RatesHttpRoutes
 import forex.programs.RatesProgram
 import forex.programs.rates.Protocol
 import forex.programs.rates.errors.Error
@@ -73,6 +72,7 @@ class HttpSpec extends AnyFunSuite with Matchers {
 
 class RatesProgramStub(rate: Either[Error, Option[Rate]]) extends RatesProgram[IO] {
   override def get(request: Protocol.GetRatesRequest): IO[Error Either Option[Rate]] = IO.pure(rate)
+  override def buildCache(): IO[Unit] = ???
 }
 
 object HttpSpec {
