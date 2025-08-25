@@ -5,12 +5,12 @@ import forex.domain.{Currency, Price}
 import java.time.OffsetDateTime
 
 case class OneFrameRate (
-    from: Currency,
-    to: Currency,
-    bid: BigDecimal,
-    ask: BigDecimal,
-    price: BigDecimal,
-    timestamp: OffsetDateTime
+  from: Currency,
+  to: Currency,
+  bid: BigDecimal,
+  ask: BigDecimal,
+  price: BigDecimal,
+  timestamp: OffsetDateTime
 )
 
 object OneFrameRate {
