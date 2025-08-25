@@ -34,7 +34,8 @@ class RatesHttpRoutes[F[_]: Sync](rates: RatesProgram[F]) extends Http4sDsl[F] {
     case GET -> Root / "health" =>
       val pair = Rate.allPairs().last
       rates.get(GetRatesRequest(pair.from, pair.to)).flatMap {
-        case Right(_) => Ok("Healthy")
+        case Right(Some(_)) => Ok("Healthy")
+        case Right(None) => ServiceUnavailable("Unhealthy")
         case Left(_) => ServiceUnavailable("Unhealthy")
       }
   }
