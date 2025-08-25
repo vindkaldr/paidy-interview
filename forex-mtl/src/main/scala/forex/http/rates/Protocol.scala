@@ -25,9 +25,7 @@ object Protocol {
   import io.circe.{Decoder, Encoder}
 
   implicit val currencyDecoder: Decoder[Currency] =
-    Decoder.decodeString.emap(str =>
-      Currency.fromString(str).toRight(s"Invalid currency: $str")
-    )
+    Decoder.decodeString.emap(str => Currency.fromString(str).toRight(s"Invalid currency: $str"))
 
   implicit val currencyEncoder: Encoder[Currency] = Encoder.encodeString.contramap(_.toString)
 

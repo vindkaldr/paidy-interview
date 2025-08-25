@@ -16,7 +16,8 @@ case class HttpConfig(
 
 case class OneFrameConfig(
     host: String = "localhost",
-    port: Int = 8081
+    port: Int = 8081,
+    token: String = "10dc303535874aeccc86a8251e6992f5"
 )
 
 case class RedisConfig(
