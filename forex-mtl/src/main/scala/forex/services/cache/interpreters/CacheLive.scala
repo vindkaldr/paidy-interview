@@ -13,17 +13,21 @@ import io.circe.syntax.EncoderOps
 
 class CacheLive[F[_]: Concurrent] (config: ApplicationConfig, redis: RedisCommands[F, String, String]) extends Algebra[F] {
   override def get(pair: Rate.Pair): F[Error Either Option[Rate]] = {
-    redis.get(cacheKey(pair)).map {
-      case Some(json) => decode[Rate](json)
+    redis.get(cacheKey(pair)).attempt.map {
+      case Right(Some(json)) => decode[Rate](json)
         .map(Option(_))
-        .leftMap(error => Error.CacheLookupFailed(s"Failed to decode: ${error.getMessage}"))
-      case None => Right(None)
+        .leftMap(error => Error.CacheLookupFailed(s"Failed to decode Redis response: ${error.getMessage}"))
+      case Right(None) => Right(None)
+      case Left(error) => Left(Error.CacheLookupFailed(s"Failed to connect to Redis: ${error.getMessage}"))
     }
   }
 
   override def setExpiring(rates: List[Rate]): F[Unit] =
     rates.traverse_ { rate =>
-      redis.setEx(s"${cacheKey(rate.pair)}", rate.asJson.noSpaces, config.redis.cacheExpiresAfter)
+      redis.setEx(s"${cacheKey(rate.pair)}", rate.asJson.noSpaces, config.redis.cacheExpiresAfter).attempt.map {
+        case Right(_) => ().pure[F]
+        case Left(error) => Left(Error.CacheLookupFailed(s"Failed to connect to Redis: ${error.getMessage}"))
+      }
     }
 
   private def cacheKey(pair: Rate.Pair) = s"${config.redis.cacheKeyPrefix}:${pair.from}:${pair.to}"

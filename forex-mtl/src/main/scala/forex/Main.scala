@@ -10,6 +10,7 @@ import org.http4s.blaze.client.BlazeClientBuilder
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.client.Client
 import org.typelevel.log4cats.slf4j.Slf4jLogger
+
 import scala.concurrent.ExecutionContext
 
 object Main extends IOApp {
@@ -32,9 +33,14 @@ class Application[F[_]: ConcurrentEffect: Timer](implicit cs: ContextShift[F]) {
     Redis[F].utf8(s"redis://${config.redis.host}:${config.redis.port}")
 
   private def inBackground(config: ApplicationConfig, program: RatesProgram[F]): Stream[F, Unit] = {
-    Stream.eval(program.buildCache()) ++
-      Stream.awakeDelay[F](config.redis.cacheBuiltAtEvery).evalMap { _ => program.buildCache() }
-        .concurrently(Stream.awakeDelay[F](config.redis.cacheBuiltIfMissingAtEvery).evalMap { _ => program.buildCacheIfMissing() })
+    Stream.eval(program.buildCache())
+      .handleErrorWith { _ => Stream.empty } ++
+      Stream.awakeDelay[F](config.redis.cacheBuiltAtEvery)
+        .evalMap { _ => program.buildCache() }
+        .handleErrorWith { _ => Stream.empty }.repeat
+        .concurrently(Stream.awakeDelay[F](config.redis.cacheBuiltIfMissingAtEvery)
+          .evalMap { _ => program.buildCacheIfMissing() }
+          .handleErrorWith { _ => Stream.empty }.repeat)
   }
 
   def stream(context: ExecutionContext, config: ApplicationConfig): Stream[F, ExitCode] = {
