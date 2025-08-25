@@ -26,5 +26,5 @@ case class RedisConfig(
     cacheKeyPrefix: String = "rate",
     cacheExpiresAfter: FiniteDuration = 5.minutes,
     cacheBuiltAtEvery: FiniteDuration = 4.minutes,
-    cacheBuiltIfMissingAtEvery: FiniteDuration = 5.seconds
+    cacheBuildRetriedAtEvery: FiniteDuration = 5.seconds
 )

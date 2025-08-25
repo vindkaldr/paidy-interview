@@ -1,6 +1,7 @@
 package forex
 
 import cats.effect._
+import cats.implicits.{catsSyntaxApplicativeError, catsSyntaxApply}
 import dev.profunktor.redis4cats.effect.Log
 import dev.profunktor.redis4cats.{Redis, RedisCommands}
 import forex.config._
@@ -12,6 +13,7 @@ import org.http4s.client.Client
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
 
 object Main extends IOApp {
   override def run(args: List[String]): IO[ExitCode] = {
@@ -36,12 +38,11 @@ class Application[F[_]: ConcurrentEffect: Timer](implicit cs: ContextShift[F]) {
     Stream.eval(program.buildCache())
       .handleErrorWith { _ => Stream.empty } ++
       Stream.awakeDelay[F](config.redis.cacheBuiltAtEvery)
-        .evalMap { _ => program.buildCache() }
-        .handleErrorWith { _ => Stream.empty }.repeat
-        .concurrently(Stream.awakeDelay[F](config.redis.cacheBuiltIfMissingAtEvery)
-          .evalMap { _ => program.buildCacheIfMissing() }
-          .handleErrorWith { _ => Stream.empty }.repeat)
+        .evalMap { _ => retryWithDelay(program.buildCache(), config.redis.cacheBuildRetriedAtEvery) }
   }
+
+  private def retryWithDelay[A](f: F[A], delay: FiniteDuration): F[A] =
+    f.handleErrorWith { _ => Timer[F].sleep(delay) *> retryWithDelay(f, delay) }
 
   def stream(context: ExecutionContext, config: ApplicationConfig): Stream[F, ExitCode] = {
     for {
