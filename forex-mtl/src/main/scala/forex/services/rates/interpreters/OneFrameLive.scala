@@ -3,8 +3,8 @@ package forex.services.rates.interpreters
 import cats.effect.ConcurrentEffect
 import cats.implicits.toFunctorOps
 import forex.config.ApplicationConfig
+import forex.domain.Rate
 import forex.domain.Rate.Pair
-import forex.domain.{Price, Rate, Timestamp}
 import forex.services.rates.Algebra
 import forex.services.rates.domain.OneFrameRate
 import forex.services.rates.errors._
@@ -30,7 +30,7 @@ class OneFrameLive[F[_]: ConcurrentEffect](config: ApplicationConfig, httpClient
         case status if status.isSuccess =>
           response.attemptAs[List[OneFrameRate]].value.map {
             case Right(rates) => Right(rates.map { r =>
-              Rate(Pair(r.from, r.to), Price(r.price), Timestamp(r.timestamp))
+              Rate(Pair(r.from, r.to), r.price, r.timestamp)
             })
             case Left(failure) => Left(Error.OneFrameLookupFailed(s"Decoding error: ${failure.getMessage}"))
           }
