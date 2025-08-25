@@ -130,7 +130,6 @@ class RatesProgramSpy(rate: Either[Error, Option[Rate]], capturedRequest: Ref[IO
     capturedRequest.set(request) *> IO.pure(rate)
 
   override def buildCache(): IO[Unit] = IO.pure(())
-  override def buildCacheIfMissing(): IO[Unit] = IO.pure(())
 }
 
 object RatesProgramSpy {

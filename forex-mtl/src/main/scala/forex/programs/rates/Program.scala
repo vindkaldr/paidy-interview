@@ -29,13 +29,6 @@ class Program[F[_]: Sync](ratesService: RatesService[F], cacheService: CacheServ
     }
   }
 
-  override def buildCacheIfMissing(): F[Unit] =
-    cacheService.get(Rate.allPairs().head).flatMap {
-      case Right(Some(_)) => ().pure[F]
-      case Right(None) => buildCache()
-      case Left(CacheError.CacheLookupFailed(msg)) => logger.error(msg) *> ().pure[F]
-    }
-
   override def buildCache(): F[Unit] =
     ratesService.get(Rate.allPairs()).flatMap {
       case Right(rates) => cacheService.setExpiring(rates)
